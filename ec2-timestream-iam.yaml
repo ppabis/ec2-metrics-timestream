@@ -1,0 +1,43 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: IAM setup for EC2 instances that will report metrics to Timestream
+
+Parameters:
+  RoleName:
+    Type: String
+    Description: Name of the role that will be created
+    Default: MeteredEC2Role
+  
+  PolicyName:
+    Type: String
+    Description: Name of the policy that will be created
+    Default: MeteredEC2TimestreamPolicy
+
+Resources:
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref RoleName
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+
+  ManagedEC2Policy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      # Attach this policy to EC2 Role on create
+      Roles:
+        - !Ref EC2Role
+      ManagedPolicyName: !Ref PolicyName
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - timestream:WriteRecords
+            # Creates a wildcard table resource for the Timestream database
+            Resource: !Join ["/", [!ImportValue Ec2MetricsTimestreamDBArn, "table", "*"]]
