@@ -1,0 +1,18 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Timestream database for system metrics
+
+Parameters:
+  DatabaseName:
+    Type: String
+    Description: Name of the Timestream database
+    Default: MyEc2SystemMetrics
+
+Resources:
+  TimestreamDatabase:
+    Type: AWS::Timestream::Database
+    Properties:
+      DatabaseName: !Ref DatabaseName
+      Tags:
+        - Key: Name
+          Value: !Ref DatabaseName
