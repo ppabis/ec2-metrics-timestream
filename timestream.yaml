@@ -16,3 +16,39 @@ Resources:
       Tags:
         - Key: Name
           Value: !Ref DatabaseName
+  
+  CpuTable:
+    Type: AWS::Timestream::Table
+    Properties:
+      DatabaseName: !Ref TimestreamDatabase
+      TableName: CpuUtilization
+      RetentionProperties:
+        MemoryStoreRetentionPeriodInHours: 36
+        MagneticStoreRetentionPeriodInDays: 2
+      Tags:
+        - Key: Name
+          Value: CpuUtilization
+
+  MemoryTable:
+    Type: AWS::Timestream::Table
+    Properties:
+      DatabaseName: !Ref TimestreamDatabase
+      TableName: MemoryUtilization
+      RetentionProperties:
+        MemoryStoreRetentionPeriodInHours: 36
+        MagneticStoreRetentionPeriodInDays: 2
+      Tags:
+        - Key: Name
+          Value: MemoryUtilization
+  
+  FilesystemTable:
+    Type: AWS::Timestream::Table
+    Properties:
+      DatabaseName: !Ref TimestreamDatabase
+      TableName: DiskUsed
+      RetentionProperties:
+        MemoryStoreRetentionPeriodInHours: 36
+        MagneticStoreRetentionPeriodInDays: 2
+      Tags:
+        - Key: Name
+          Value: DiskUsed
