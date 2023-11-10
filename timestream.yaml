@@ -52,3 +52,10 @@ Resources:
       Tags:
         - Key: Name
           Value: DiskUsed
+
+Outputs:
+  Ec2MetricsTimestreamDBArn:
+    Description: ARN of the Timestream database for EC2 system metrics
+    Value: !GetAtt TimestreamDatabase.Arn
+    Export:
+      Name: !Sub "Ec2MetricsTimestreamDBArn"
