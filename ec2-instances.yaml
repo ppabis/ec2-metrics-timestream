@@ -26,6 +26,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
+          # EC2 Instance Connect IP range for eu-west-1
           CidrIp: 18.202.216.48/29
 
   Instance1:
