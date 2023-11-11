@@ -41,3 +41,25 @@ Resources:
               - timestream:WriteRecords
             # Creates a wildcard table resource for the Timestream database
             Resource: !Join ["/", [!ImportValue Ec2MetricsTimestreamDBArn, "table", "*"]]
+          - Effect: Allow
+            Action:
+              - timestream:DescribeEndpoints
+            Resource: "*"
+
+
+    
+  EC2Profile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref EC2Role
+
+Outputs:
+  ProfileArn:
+    Description: Name of the instance profile
+    Value: !Ref EC2Profile
+    Export:
+      Name: "MeteredEC2Profile"
+
+  
