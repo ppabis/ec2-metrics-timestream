@@ -1,11 +1,11 @@
-import boto3, os, time
+import boto3, os, time, requests
 
 """
 This script runs in a loop, collects CPU, Memory and root filesystem metrics and
 sends it to Timestream.
 """
 
-def get_cpu() -> list(float):
+def get_cpu() -> list[float]:
     """
     Get average CPU utilization per core
     Based on: https://www.idnt.net/en-US/kb/941772
@@ -65,3 +65,84 @@ def get_disk() -> (float, float):
     free_pct = float(values[3]) / total * 100
 
     return (used_pct, free_pct)
+
+def main():
+    database_name = os.environ['TS_DATABASE']
+    # Ask IMDSv2 for Instance ID
+    token = requests.put('http://169.254.169.254/latest/api/token', headers={'X-aws-ec2-metadata-token-ttl-seconds': '60'}).text
+    instance_id = requests.get('http://169.254.169.254/latest/meta-data/instance-id', headers={'X-aws-ec2-metadata-token': token}).text
+    region = requests.get('http://169.254.169.254/latest/meta-data/placement/region', headers={'X-aws-ec2-metadata-token': token}).text
+
+    dimensions = [ {'Name': 'InstanceId', 'Value': instance_id} ]
+    
+    ts = boto3.client('timestream-write', region_name=region)
+    while True:
+        cpu = get_cpu()
+        memory = get_memory()
+        disk = get_disk()
+
+        cpu_records = [
+            {
+                'Dimensions': dimensions + [{'Name': 'Core', 'Value': str(i)}],
+                'MeasureName': 'cpu_utilization',
+                'MeasureValue': str(cpu[i]),
+                'MeasureValueType': 'DOUBLE',
+                'Time': str(int(time.time() * 1000)),
+                'TimeUnit': 'MILLISECONDS',
+            } for i in range(len(cpu))
+        ]
+
+        memory_records = [
+            {
+                'Dimensions': dimensions,
+                'MeasureName': 'memory_buffered',
+                'MeasureValue': str(memory[0]),
+                'MeasureValueType': 'DOUBLE',
+                'Time': str(int(time.time() * 1000)),
+                'TimeUnit': 'MILLISECONDS',
+            },
+            {
+                'Dimensions': dimensions,
+                'MeasureName': 'memory_free',
+                'MeasureValue': str(memory[1]),
+                'MeasureValueType': 'DOUBLE',
+                'Time': str(int(time.time() * 1000)),
+                'TimeUnit': 'MILLISECONDS',
+            },
+            {
+                'Dimensions': dimensions,
+                'MeasureName': 'memory_used',
+                'MeasureValue': str(memory[2]),
+                'MeasureValueType': 'DOUBLE',
+                'Time': str(int(time.time() * 1000)),
+                'TimeUnit': 'MILLISECONDS',
+            }
+        ]
+
+        disk_records = [
+            {
+                'Dimensions': dimensions,
+                'MeasureName': 'disk_used',
+                'MeasureValue': str(disk[0]),
+                'MeasureValueType': 'DOUBLE',
+                'Time': str(int(time.time() * 1000)),
+                'TimeUnit': 'MILLISECONDS',
+            },
+            {
+                'Dimensions': dimensions,
+                'MeasureName': 'disk_free',
+                'MeasureValue': str(disk[1]),
+                'MeasureValueType': 'DOUBLE',
+                'Time': str(int(time.time() * 1000)),
+                'TimeUnit': 'MILLISECONDS',
+            }
+        ]
+
+        ts.write_records(DatabaseName=database_name, TableName='CpuUtilization', Records=cpu_records)
+        ts.write_records(DatabaseName=database_name, TableName='MemoryUtilization', Records=memory_records)
+        ts.write_records(DatabaseName=database_name, TableName='DiskUsed', Records=disk_records)
+        time.sleep(0.2)
+
+
+if __name__ == '__main__':
+    main()
