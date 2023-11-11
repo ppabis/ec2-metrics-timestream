@@ -1,0 +1,59 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 instances that will report metrics to Timestream
+
+Parameters:
+  ArmAmi:
+    Type: String
+    Description: AL2023 AMI ID for ARM-based EC2 instances
+    Default: "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64:57}}"
+  AmdAmi:
+    Type: String
+    Description: AL2023 AMI ID for AMD64-based EC2 instances
+    Default: "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64:57}}"
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID for the EC2 instances
+
+Resources:
+  SSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupName: SSHSecurityGroup
+      GroupDescription: Allow SSH access from EC2 Instance Connect
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 18.202.216.48/29
+
+  Instance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3a.micro
+      ImageId: !Ref AmdAmi
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          GroupSet:
+            - !Ref SSHSecurityGroup
+          AssociatePublicIpAddress: true
+      IamInstanceProfile: !ImportValue MeteredEC2Profile
+      Tags:
+        - Key: Name
+          Value: Instance1
+
+  Instance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t4g.small
+      ImageId: !Ref ArmAmi
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          GroupSet:
+            - !Ref SSHSecurityGroup
+          AssociatePublicIpAddress: true
+      IamInstanceProfile: !ImportValue MeteredEC2Profile
+      Tags:
+        - Key: Name
+          Value: Instance2
